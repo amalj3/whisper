@@ -15,7 +15,7 @@ from .audio import (
     N_SAMPLES,
     SAMPLE_RATE,
     log_mel_spectrogram,
-    pad_or_trim,
+    pad_or_trim
 )
 from .decoding import DecodingOptions, DecodingResult
 from .timing import add_word_timestamps
@@ -139,6 +139,9 @@ def transcribe(
     mel = log_mel_spectrogram(audio, model.dims.n_mels, padding=N_SAMPLES)
     content_frames = mel.shape[-1] - N_FRAMES
     content_duration = float(content_frames * HOP_LENGTH / SAMPLE_RATE)
+    
+    # grab audio file's original audio length before processing it
+    original_token_count = content_frames // (N_FRAMES // model.dims.n_audio_ctx)
 
     if decode_options.get("language", None) is None:
         if not model.is_multilingual:
@@ -220,7 +223,6 @@ def transcribe(
                 needs_fallback = False  # silence
             if not needs_fallback:
                 break
-
         return decode_result
 
     clip_idx = 0
@@ -247,6 +249,7 @@ def transcribe(
         *, start: float, end: float, tokens: torch.Tensor, result: DecodingResult
     ):
         tokens = tokens.tolist()
+        # print(' num tokens: ', len( tokens )) no
         text_tokens = [token for token in tokens if token < tokenizer.eot]
         return {
             "seek": seek,
@@ -511,7 +514,7 @@ def transcribe(
         text=tokenizer.decode(all_tokens[len(initial_prompt_tokens) :]),
         segments=all_segments,
         language=language,
-    )
+    ), original_token_count
 
 
 def cli():
