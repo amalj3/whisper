@@ -142,7 +142,7 @@ def transcribe(
     
     # grab audio file's original audio length before processing it
     original_token_count = content_frames // (N_FRAMES // model.dims.n_audio_ctx)
-
+    token_count = original_token_count
     if decode_options.get("language", None) is None:
         if not model.is_multilingual:
             decode_options["language"] = "en"
@@ -184,7 +184,7 @@ def transcribe(
     if word_timestamps and task == "translate":
         warnings.warn("Word-level timestamps on translations may not be reliable.")
 
-    def decode_with_fallback(segment: torch.Tensor) -> DecodingResult:
+    def decode_with_fallback(segment: torch.Tensor, token_count: int = original_token_count) -> DecodingResult:
         temperatures = (
             [temperature] if isinstance(temperature, (int, float)) else temperature
         )
@@ -201,7 +201,7 @@ def transcribe(
                 kwargs.pop("best_of", None)
 
             options = DecodingOptions(**kwargs, temperature=t)
-            decode_result = model.decode(segment, options)
+            decode_result = model.decode(segment, options, token_count=original_token_count)
 
             needs_fallback = False
             if (
@@ -294,7 +294,6 @@ def transcribe(
                 decode_options["prompt"] = initial_prompt_tokens + remaining_prompt
             else:
                 decode_options["prompt"] = all_tokens[prompt_reset_since:]
-
             result: DecodingResult = decode_with_fallback(mel_segment)
             tokens = torch.tensor(result.tokens)
 
@@ -514,7 +513,7 @@ def transcribe(
         text=tokenizer.decode(all_tokens[len(initial_prompt_tokens) :]),
         segments=all_segments,
         language=language,
-    ), original_token_count
+    )
 
 
 def cli():

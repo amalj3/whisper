@@ -112,6 +112,7 @@ class DecodingOptions:
 
     # implementation details
     fp16: bool = True  # use fp16 for most of the calculation
+    
 
 
 @dataclass(frozen=True)
@@ -641,7 +642,7 @@ class DecodingTask:
 
         return tuple(sorted(set(suppress_tokens)))
 
-    def _get_audio_features(self, mel: Tensor):
+    def _get_audio_features(self, mel: Tensor, token_count: int = -1):
         if self.options.fp16:
             mel = mel.half()
 
@@ -652,7 +653,7 @@ class DecodingTask:
             # encoded audio features are given; skip audio encoding
             audio_features = mel
         else:
-            audio_features = self.model.encoder(mel)
+            audio_features = self.model.encoder(mel, token_count=token_count)
 
         if audio_features.dtype != (
             torch.float16 if self.options.fp16 else torch.float32
@@ -710,12 +711,12 @@ class DecodingTask:
         return tokens, sum_logprobs, no_speech_probs
 
     @torch.no_grad()
-    def run(self, mel: Tensor) -> List[DecodingResult]:
+    def run(self, mel: Tensor, token_count: int) -> List[DecodingResult]:
         self.decoder.reset()
         tokenizer: Tokenizer = self.tokenizer
         n_audio: int = mel.shape[0]
 
-        audio_features: Tensor = self._get_audio_features(mel)  # encoder forward pass
+        audio_features: Tensor = self._get_audio_features(mel, token_count=token_count)  # encoder forward pass
         tokens: Tensor = torch.tensor([self.initial_tokens]).repeat(n_audio, 1)
 
         # detect language if requested, overwriting the language token
@@ -794,6 +795,7 @@ def decode(
     model: "Whisper",
     mel: Tensor,
     options: DecodingOptions = DecodingOptions(),
+    token_count: int = -1,
     **kwargs,
 ) -> Union[DecodingResult, List[DecodingResult]]:
     """
@@ -809,6 +811,8 @@ def decode(
 
     options: DecodingOptions
         A dataclass that contains all necessary options for decoding 30-second segments
+    
+    token_count: number of tokens in original audio file before padding was introduced
 
     Returns
     -------
@@ -817,10 +821,8 @@ def decode(
     """
     if single := mel.ndim == 2:
         mel = mel.unsqueeze(0)
-
     if kwargs:
         options = replace(options, **kwargs)
-
-    result = DecodingTask(model, options).run(mel)
+    result = DecodingTask(model, options).run(mel, token_count=token_count)
 
     return result[0] if single else result
