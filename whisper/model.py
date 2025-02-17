@@ -238,7 +238,7 @@ class AudioEncoder(nn.Module):
 
         assert x.shape[1:] == self.positional_embedding.shape, "incorrect audio shape"
 
-        if self.ext_feat_flag and token_count < (TOTAL_NUM_TOKENS - 200 - 2):
+        if self.ext_feat_flag and token_count < (TOTAL_NUM_TOKENS - 200 - 2) and token_count > 0:
             x = self.token_pruner.prune(x, self.positional_embedding, token_count )
         else:
             x = (x + self.positional_embedding).to(x.dtype)
