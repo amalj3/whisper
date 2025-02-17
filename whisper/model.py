@@ -186,20 +186,15 @@ class AudioEncoderTokenPruner():
         self.n_extension = n_extension
         self.cut_region = cut_region
 
-    def prune(self, x: Tensor, positional_embedding: Tensor, token_count: int = -1):
-        dynamic_pruning = True # change to modify cut region
-        if token_count != -1 and token_count < ( TOTAL_NUM_TOKENS - 200 - 1 ) and dynamic_pruning:
-            self.cut_region = [ token_count, TOTAL_NUM_TOKENS - 200 ]
+
     def prune(self, x: Tensor, positional_embedding: Tensor, token_count: int):
-        dynamic_pruning = True # change to modify cut region
-        if token_count != -1 and token_count < TOTAL_NUM_TOKENS - 200 - 1 and dynamic_pruning:
+        if token_count != -1:
             cut_region = [ token_count, TOTAL_NUM_TOKENS - 200 ]
 
-        # audio_length = int((x.shape[1] + 1) // 2)
-        # [0-950, -----, 1300-1500]
+            # audio_length = int((x.shape[1] + 1) // 2)
+            # [0-950, -----, 1300-1500]
 
         cut_start, cut_end = self.cut_region
-        print('cut region: ', self.cut_region)
         assert 0 <= cut_start < cut_end <= x.shape[1], "Cut region out of bounds!"
 
         # Keep only the uncut regions
@@ -243,7 +238,7 @@ class AudioEncoder(nn.Module):
 
         assert x.shape[1:] == self.positional_embedding.shape, "incorrect audio shape"
 
-        if self.ext_feat_flag:
+        if self.ext_feat_flag and token_count < (TOTAL_NUM_TOKENS - 200 - 2):
             x = self.token_pruner.prune(x, self.positional_embedding, token_count )
         else:
             x = (x + self.positional_embedding).to(x.dtype)
