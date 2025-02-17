@@ -14,10 +14,12 @@ from .utils import compression_ratio
 if TYPE_CHECKING:
     from .model import Whisper
 
+import inspect
+
 
 @torch.no_grad()
 def detect_language(
-    model: "Whisper", mel: Tensor, tokenizer: Tokenizer = None
+    model: "Whisper", mel: Tensor, tokenizer: Tokenizer = None, token_count: int = -1
 ) -> Tuple[Tensor, List[dict]]:
     """
     Detect the spoken language in the audio, and return them as list of strings, along with the ids
@@ -31,6 +33,7 @@ def detect_language(
     language_probs : List[Dict[str, float]], length = n_audio
         list of dictionaries containing the probability distribution over all languages.
     """
+
     if tokenizer is None:
         tokenizer = get_tokenizer(
             model.is_multilingual, num_languages=model.num_languages
@@ -49,7 +52,8 @@ def detect_language(
 
     # skip encoder forward pass if already-encoded audio features were given
     if mel.shape[-2:] != (model.dims.n_audio_ctx, model.dims.n_audio_state):
-        mel = model.encoder(mel)
+
+        mel = model.encoder(mel, token_count=token_count)
 
     # forward pass using a single token, startoftranscript
     n_audio = mel.shape[0]

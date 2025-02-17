@@ -187,15 +187,16 @@ class AudioEncoderTokenPruner():
         self.cut_region = cut_region
 
     def prune(self, x: Tensor, positional_embedding: Tensor, token_count: int = -1):
-        dynamic_pruning = False # change to modify cut region
-        if token_count != -1 and token_count < TOTAL_NUM_TOKENS - 200:
-            cut_region = [ token_count, TOTAL_NUM_TOKENS - 200 ]
-            print('updated cut region: ', cut_region)
+        dynamic_pruning = True # change to modify cut region
+        if token_count != -1 and token_count < ( TOTAL_NUM_TOKENS - 200 ):
+            self.cut_region = [ token_count, TOTAL_NUM_TOKENS - 200 ]
+            print('updated cut region: ', self.cut_region)
 
         # audio_length = int((x.shape[1] + 1) // 2)
         # [0-950, -----, 1300-1500]
 
         cut_start, cut_end = self.cut_region
+        print('cut region: ', self.cut_region)
         assert 0 <= cut_start < cut_end <= x.shape[1], "Cut region out of bounds!"
 
         # Keep only the uncut regions
@@ -228,7 +229,7 @@ class AudioEncoder(nn.Module):
         if ext_feat_flag:
             self.token_pruner = AudioEncoderTokenPruner(n_extension=200, cut_region=cut_region)
 
-    def forward(self, x: Tensor, token_count: int = -1):
+    def forward(self, x: Tensor, token_count: int):
         """
         x : torch.Tensor, shape = (batch_size, n_mels, n_ctx)
             the mel spectrogram of the audio
