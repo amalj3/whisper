@@ -188,11 +188,8 @@ class AudioEncoderTokenPruner():
 
     def prune(self, x: Tensor, positional_embedding: Tensor, token_count: int):
         dynamic_pruning = True # change to modify cut region
-        print('token count: ', token_count)
-        print('cut region before changes: ', cut_region)
         if token_count != -1 and token_count < TOTAL_NUM_TOKENS - 200 - 1 and dynamic_pruning:
             cut_region = [ token_count, TOTAL_NUM_TOKENS - 200 ]
-            print('updated cut region: ', cut_region)
 
         # audio_length = int((x.shape[1] + 1) // 2)
         # [0-950, -----, 1300-1500]
