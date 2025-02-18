@@ -15,7 +15,7 @@ from .audio import (
     N_SAMPLES,
     SAMPLE_RATE,
     log_mel_spectrogram,
-    pad_or_trim
+    pad_or_trim,
 )
 from .decoding import DecodingOptions, DecodingResult
 from .timing import add_word_timestamps
@@ -139,10 +139,6 @@ def transcribe(
     mel = log_mel_spectrogram(audio, model.dims.n_mels, padding=N_SAMPLES)
     content_frames = mel.shape[-1] - N_FRAMES
     content_duration = float(content_frames * HOP_LENGTH / SAMPLE_RATE)
-    
-    # grab audio file's original audio length before processing it
-    original_token_count = content_frames // (N_FRAMES // model.dims.n_audio_ctx)
-    token_count = original_token_count
 
     if decode_options.get("language", None) is None:
         if not model.is_multilingual:
@@ -153,7 +149,7 @@ def transcribe(
                     "Detecting language using up to the first 30 seconds. Use `--language` to specify the language"
                 )
             mel_segment = pad_or_trim(mel, N_FRAMES).to(model.device).to(dtype)
-            _, probs = model.detect_language(mel_segment, token_count=token_count)
+            _, probs = model.detect_language(mel_segment)
             decode_options["language"] = max(probs, key=probs.get)
             if verbose is not None:
                 print(
@@ -185,7 +181,7 @@ def transcribe(
     if word_timestamps and task == "translate":
         warnings.warn("Word-level timestamps on translations may not be reliable.")
 
-    def decode_with_fallback(segment: torch.Tensor, token_count: int = original_token_count) -> DecodingResult:
+    def decode_with_fallback(segment: torch.Tensor) -> DecodingResult:
         temperatures = (
             [temperature] if isinstance(temperature, (int, float)) else temperature
         )
@@ -202,7 +198,7 @@ def transcribe(
                 kwargs.pop("best_of", None)
 
             options = DecodingOptions(**kwargs, temperature=t)
-            decode_result = model.decode(segment, options, token_count=original_token_count)
+            decode_result = model.decode(segment, options)
 
             needs_fallback = False
             if (
@@ -224,6 +220,7 @@ def transcribe(
                 needs_fallback = False  # silence
             if not needs_fallback:
                 break
+
         return decode_result
 
     clip_idx = 0
@@ -281,6 +278,11 @@ def transcribe(
                 if clip_idx < len(seek_clips):
                     seek = seek_clips[clip_idx][0]
                 continue
+            
+            if (verbose):
+                print(f"Processing chunk: Start={seek / FRAMES_PER_SECOND:.2f}s, "
+                  f"End={(seek + N_FRAMES) / FRAMES_PER_SECOND:.2f}s")
+
             time_offset = float(seek * HOP_LENGTH / SAMPLE_RATE)
             window_end_time = float((seek + N_FRAMES) * HOP_LENGTH / SAMPLE_RATE)
             segment_size = min(N_FRAMES, content_frames - seek, seek_clip_end - seek)
