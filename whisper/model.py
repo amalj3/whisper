@@ -24,6 +24,7 @@ except (ImportError, RuntimeError, OSError):
     scaled_dot_product_attention = None
     SDPA_AVAILABLE = False
 
+GLOBAL_CHUNK_INFO = {"current_timestamp": None}
 
 @dataclass
 class ModelDimensions:
@@ -163,6 +164,8 @@ class ResidualAttentionBlock(nn.Module):
         )
         self.mlp_ln = LayerNorm(n_state)
 
+        self.all_cross_attn_weights = []
+
     def forward(
         self,
         x: Tensor,
@@ -176,6 +179,13 @@ class ResidualAttentionBlock(nn.Module):
             cross_out, cross_attn_weights = self.cross_attn(self.cross_attn_ln(x), xa, kv_cache=kv_cache)
             x = x + cross_out
             self.cross_attn.attn_weights = cross_attn_weights  # Store weights
+
+            chunk_timestamp = GLOBAL_CHUNK_INFO["current_timestamp"]
+            self.all_cross_attn_weights.append({
+                "timestamp": chunk_timestamp,
+                "weights": cross_attn_weights.detach()
+            })
+
 
         x = x + self.mlp(self.mlp_ln(x))
         return x

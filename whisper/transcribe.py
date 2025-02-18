@@ -8,6 +8,8 @@ import numpy as np
 import torch
 import tqdm
 
+from whisper.model import GLOBAL_CHUNK_INFO
+
 from .audio import (
     FRAMES_PER_SECOND,
     HOP_LENGTH,
@@ -279,6 +281,8 @@ def transcribe(
                     seek = seek_clips[clip_idx][0]
                 continue
             
+            GLOBAL_CHUNK_INFO["current_timestamp"] = (seek_clip_start, seek_clip_end)
+
             if (verbose):
                 print(f"Processing chunk: Start={seek / FRAMES_PER_SECOND:.2f}s, "
                   f"End={(seek + N_FRAMES) / FRAMES_PER_SECOND:.2f}s")
