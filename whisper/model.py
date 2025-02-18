@@ -188,11 +188,14 @@ class AudioEncoderTokenPruner():
 
 
     def prune(self, x: Tensor, positional_embedding: Tensor, token_count: int):
+        print('in prune')
         if token_count != -1:
             self.cut_region = [ token_count + 1, TOTAL_NUM_TOKENS - 200 ]
 
             # audio_length = int((x.shape[1] + 1) // 2)
             # [0-950, -----, 1300-1500]
+        print('token count: ', token_count)
+        print('cut region: ', self.cut_region)
         cut_start, cut_end = self.cut_region
         assert 0 <= cut_start 
         assert cut_start < cut_end
