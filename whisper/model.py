@@ -14,6 +14,7 @@ from torch import Tensor, nn
 from .decoding import decode as decode_function
 from .decoding import detect_language as detect_language_function
 from .transcribe import transcribe as transcribe_function
+from .transcribe import GLOBAL_CHUNK_INFO
 from .audio import TOTAL_NUM_TOKENS
 
 try:
@@ -23,8 +24,6 @@ try:
 except (ImportError, RuntimeError, OSError):
     scaled_dot_product_attention = None
     SDPA_AVAILABLE = False
-
-GLOBAL_CHUNK_INFO = {"current_timestamp": None}
 
 @dataclass
 class ModelDimensions:

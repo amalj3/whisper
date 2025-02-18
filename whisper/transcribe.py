@@ -8,7 +8,7 @@ import numpy as np
 import torch
 import tqdm
 
-from whisper.model import GLOBAL_CHUNK_INFO
+GLOBAL_CHUNK_INFO = {"current_timestamp": None}
 
 from .audio import (
     FRAMES_PER_SECOND,
